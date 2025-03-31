@@ -7,7 +7,7 @@ use {
 };
 
 declare_program!(jupiter_aggregator);
-declare_id!("EqwMyZVGTMGegzvWwAsrtWvo7M8HHAuCTp8PCrXkrCuA");
+declare_id!("AHNJKkm4Gd3FpUrdhYsuvf7tPErUpR8dgmx6xNPSHNuc");
 
 #[program]
 pub mod delegate_vault {

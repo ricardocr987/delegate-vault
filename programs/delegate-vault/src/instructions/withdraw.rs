@@ -12,7 +12,6 @@ use {
 pub struct Withdraw<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
-    pub delegate: SystemAccount<'info>,
     // ephemeral account to use as ID
     pub order: SystemAccount<'info>,
     #[account(

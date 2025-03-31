@@ -20,8 +20,9 @@ pub struct Liquidate<'info> {
             manager.authority.as_ref(),
         ],
         bump = manager.bump,
-        constraint = manager.authority == user.key() 
-            && manager.delegate == signer.key() @ErrorCode::IncorrectSigner
+        constraint = manager.authority == user.key()
+            && (manager.delegate == signer.key() || manager.authority == signer.key()) 
+            @ErrorCode::IncorrectSigner
     )]
     pub manager: Account<'info, Manager>,
 

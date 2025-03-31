@@ -5,17 +5,15 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-delegate_vault = "EqwMyZVGTMGegzvWwAsrtWvo7M8HHAuCTp8PCrXkrCuA"
+delegate_vault = "AHNJKkm4Gd3FpUrdhYsuvf7tPErUpR8dgmx6xNPSHNuc"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-deploy-local = "solana program deploy target/deploy/delegate-vault.so --program-id target/deploy/delegate-vault-keypair.json -C ~/.config/solana/cli/local.yml --use-rpc --with-compute-unit-price 10"
-deploy-mainnet = "solana program deploy target/deploy/delegate-vault.so --program-id target/deploy/delegate-vault-keypair.json -C ~/.config/solana/cli/config.yml --use-rpc --with-compute-unit-price 10"
 idl-init = "anchor idl init -f ./target/idl/delegate-vault.json 8KQG1MYXru73rqobftpFjD3hBD8Ab3jaag8wbjZG63sx --provider.wallet ~/.config/solana/id.json --provider.cluster SET_RPC_HERE"
