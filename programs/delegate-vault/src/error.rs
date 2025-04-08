@@ -8,4 +8,14 @@ pub enum ErrorCode {
     IncorrectSigner,
     #[msg("You are providing an incorrect mint")]
     IncorrectMint,
+    #[msg("You are providing an incorrect owner")]
+    IncorrectOwner,
+    #[msg("Numerical overflow occurred during calculation")]
+    NumericalOverflow,
+    #[msg("Performance fee is too high")]
+    IncorrectFee,
+    #[msg("Incorrect project")]
+    IncorrectProject,
+    #[msg("Incorrect manager")]
+    IncorrectManager,
 }

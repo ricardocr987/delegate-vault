@@ -1,7 +1,6 @@
 use {
     crate::state::*,
     anchor_lang::prelude::*,
-    anchor_spl::token_interface::Mint,
 };
 
 #[derive(Accounts)]
@@ -15,12 +14,13 @@ pub struct InitManager<'info> {
         payer = signer,
         seeds = [
             b"manager".as_ref(),
+            project.key().as_ref(),
             signer.key().as_ref(),
         ],
         bump,
     )]
     pub manager: Box<Account<'info, Manager>>,
-    pub stable_mint: Box<InterfaceAccount<'info, Mint>>,
+    pub project: Box<Account<'info, Project>>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
 }
@@ -28,9 +28,9 @@ pub struct InitManager<'info> {
 pub fn handler<'info>(ctx: Context<InitManager>) -> Result<()> {
     let manager = &mut ctx.accounts.manager;
 
+    manager.project = ctx.accounts.project.key();
     manager.authority = ctx.accounts.signer.key();
     manager.delegate = ctx.accounts.delegate.key();
-    manager.stable_mint = ctx.accounts.stable_mint.key();
     manager.bump = ctx.bumps.manager;
     
     Ok(())
