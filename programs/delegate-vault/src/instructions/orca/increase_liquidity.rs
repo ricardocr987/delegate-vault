@@ -48,30 +48,14 @@ pub struct IncreaseLiquidity<'info> {
 
   #[account(
     mut,
-    seeds = [
-      b"order_vault".as_ref(),
-      signer.key().as_ref(),
-      manager.key().as_ref(),
-      order.key().as_ref(),
-      order_vault.mint.key().as_ref(),
-    ],
-    bump,
-    constraint = order_vault.owner == manager.key() @ErrorCode::IncorrectOwner
+    constraint = manager_vault_a.owner == manager.key() @ErrorCode::IncorrectOwner
   )]
-  pub order_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+  pub manager_vault_a: Box<InterfaceAccount<'info, TokenAccount>>,
   #[account(
     mut, 
-    seeds = [
-      b"token_vault".as_ref(),
-      signer.key().as_ref(),
-      manager.key().as_ref(),
-      order.key().as_ref(),
-      token_vault.mint.key().as_ref(),
-    ],
-    bump,
-    constraint = token_vault.owner == manager.key() @ErrorCode::IncorrectOwner
+    constraint = manager_vault_b.owner == manager.key() @ErrorCode::IncorrectOwner
   )]
-  pub token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+  pub manager_vault_b: Box<InterfaceAccount<'info, TokenAccount>>,
 
   #[account(mut, constraint = token_vault_a.key() == whirlpool.token_vault_a)]
   pub token_vault_a: Box<InterfaceAccount<'info, TokenAccount>>,
@@ -103,16 +87,16 @@ pub fn handler(
       &[manager.bump],
   ];
 
-  let token_owner_vault_a = if ctx.accounts.order_vault.mint == ctx.accounts.whirlpool.token_mint_a {
-      ctx.accounts.order_vault.to_account_info()
+  let token_owner_vault_a = if ctx.accounts.manager_vault_a.mint == ctx.accounts.whirlpool.token_mint_a {
+      ctx.accounts.manager_vault_a.to_account_info()
   } else {
-      ctx.accounts.token_vault.to_account_info()
+      ctx.accounts.manager_vault_b.to_account_info()
   };
 
-  let token_owner_vault_b = if ctx.accounts.token_vault.mint == ctx.accounts.whirlpool.token_mint_b {
-      ctx.accounts.token_vault.to_account_info()
+  let token_owner_vault_b = if ctx.accounts.manager_vault_b.mint == ctx.accounts.whirlpool.token_mint_b {
+      ctx.accounts.manager_vault_b.to_account_info()
   } else {
-      ctx.accounts.order_vault.to_account_info()
+      ctx.accounts.manager_vault_a.to_account_info()
   };
 
   whirlpool_cpi::cpi::increase_liquidity(
