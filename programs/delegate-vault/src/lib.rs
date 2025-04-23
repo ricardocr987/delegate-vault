@@ -29,6 +29,10 @@ pub mod delegate_vault {
         init_manager::handler(ctx)
     }
 
+    pub fn init_token_vault(ctx: Context<InitTokenVault>) -> Result<()> {
+        init_token_vault::handler(ctx)
+    }
+
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         deposit::handler(ctx, amount)
     }

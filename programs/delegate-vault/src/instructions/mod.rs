@@ -6,6 +6,7 @@ pub mod edit_project_fee;
 pub mod withdraw_fees;
 pub mod jup;
 pub mod orca;
+pub mod init_token_vault;
 
 pub use withdraw::*;
 pub use deposit::*;
@@ -13,6 +14,7 @@ pub use init_manager::*;
 pub use init_project::*;
 pub use edit_project_fee::*;
 pub use withdraw_fees::*;
+pub use init_token_vault::*;
 
 pub use jup::swap::*;
 pub use jup::liquidate::*;

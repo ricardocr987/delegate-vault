@@ -87,18 +87,6 @@ pub fn handler(
       &[manager.bump],
   ];
 
-  let token_owner_vault_a = if ctx.accounts.manager_vault_a.mint == ctx.accounts.whirlpool.token_mint_a {
-      ctx.accounts.manager_vault_a.to_account_info()
-  } else {
-      ctx.accounts.manager_vault_b.to_account_info()
-  };
-
-  let token_owner_vault_b = if ctx.accounts.manager_vault_b.mint == ctx.accounts.whirlpool.token_mint_b {
-      ctx.accounts.manager_vault_b.to_account_info()
-  } else {
-      ctx.accounts.manager_vault_a.to_account_info()
-  };
-
   whirlpool_cpi::cpi::increase_liquidity(
     CpiContext::new_with_signer(
         ctx.accounts.whirlpool_program.to_account_info(),
@@ -108,8 +96,8 @@ pub fn handler(
           position_authority: ctx.accounts.manager.to_account_info(),
           position: ctx.accounts.position.to_account_info(),
           position_token_account: ctx.accounts.position_token_account.to_account_info(),
-          token_owner_account_a: token_owner_vault_a,
-          token_owner_account_b: token_owner_vault_b,
+          token_owner_account_a: ctx.accounts.manager_vault_a.to_account_info(),
+          token_owner_account_b: ctx.accounts.manager_vault_b.to_account_info(),
           token_vault_a: ctx.accounts.token_vault_a.to_account_info(),
           token_vault_b: ctx.accounts.token_vault_b.to_account_info(),
           tick_array_lower: ctx.accounts.tick_array_lower.to_account_info(),

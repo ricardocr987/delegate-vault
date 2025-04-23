@@ -35,27 +35,13 @@ pub struct Swap<'info> {
     pub manager: Box<Account<'info, Manager>>,
 
     #[account(
-        constraint = order.deposit_mint == input_mint.key() @ErrorCode::IncorrectMint
-    )]
-    pub input_mint: InterfaceAccount<'info, Mint>,
-    pub input_mint_program: Interface<'info, TokenInterface>,
-
-    pub output_mint: InterfaceAccount<'info, Mint>,
-    pub output_mint_program: Interface<'info, TokenInterface>,
-
-    #[account(
         mut,
-        seeds = [
-            b"order_vault".as_ref(),
-            signer.key().as_ref(),
-            manager.key().as_ref(),
-            order.key().as_ref(),
-            input_mint.key().as_ref(),
-        ],
-        bump,
         constraint = token_vault.owner == manager.key() @ErrorCode::IncorrectOwner
     )]
     pub order_vault: InterfaceAccount<'info, TokenAccount>,
+
+    pub output_mint: InterfaceAccount<'info, Mint>,
+    pub output_mint_program: Interface<'info, TokenInterface>,
 
     #[account(
         init,
