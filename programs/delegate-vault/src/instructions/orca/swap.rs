@@ -42,45 +42,24 @@ pub struct OrcaSwap<'info> {
     )]
     pub manager: Box<Account<'info, Manager>>,
 
-    #[account(
-        constraint = order.deposit_mint == input_mint.key() @ErrorCode::IncorrectMint
-    )]
+    // to do: should be wirlpool_mint_a and wirlpool_mint_b
+    // to-do: apply chack deposit mint is in the transaction
     pub input_mint: Box<InterfaceAccount<'info, Mint>>,
     pub output_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         mut,
-        seeds = [
-            b"order_vault".as_ref(),
-            signer.key().as_ref(),
-            manager.key().as_ref(),
-            order.key().as_ref(),
-            input_mint.key().as_ref(),
-        ],
-        bump,
-        constraint = order_vault.owner == manager.key() @ErrorCode::IncorrectOwner
+        constraint = manager_vault_a.owner == manager.key() @ErrorCode::IncorrectOwner
+      )]
+    pub manager_vault_a: Box<InterfaceAccount<'info, TokenAccount>>,
+    #[account(
+        mut, 
+        constraint = manager_vault_b.owner == manager.key() @ErrorCode::IncorrectOwner
     )]
-    pub order_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub manager_vault_b: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(mut, constraint = token_vault_a.key() == whirlpool.token_vault_a)]
     pub token_vault_a: Box<InterfaceAccount<'info, TokenAccount>>,
-
-    #[account(
-        init,
-        payer = signer,
-        seeds = [
-            b"token_vault".as_ref(),
-            signer.key().as_ref(),
-            manager.key().as_ref(),
-            order.key().as_ref(),
-            output_mint.key().as_ref(),
-        ],
-        bump,
-        token::mint = output_mint,
-        token::authority = manager,
-        token::token_program = token_program,
-    )]
-    pub token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(mut, constraint = token_vault_b.key() == whirlpool.token_vault_b)]
     pub token_vault_b: Box<InterfaceAccount<'info, TokenAccount>>,
@@ -118,18 +97,6 @@ pub fn handler<'info>(ctx: Context<OrcaSwap>, params: OrcaSwapParams) -> Result<
         &[manager.bump],
     ];
 
-    let token_owner_vault_a = if ctx.accounts.token_vault_a.mint == ctx.accounts.input_mint.key() {
-        ctx.accounts.order_vault.to_account_info()
-    } else {
-        ctx.accounts.token_vault.to_account_info()
-    };
-
-    let token_owner_vault_b = if ctx.accounts.token_vault_b.mint == ctx.accounts.input_mint.key() {
-        ctx.accounts.order_vault.to_account_info()
-    } else {
-        ctx.accounts.token_vault.to_account_info()
-    };
-
     whirlpool_cpi::cpi::swap(
         CpiContext::new_with_signer(
             ctx.accounts.whirlpool_program.to_account_info(),
@@ -137,9 +104,9 @@ pub fn handler<'info>(ctx: Context<OrcaSwap>, params: OrcaSwapParams) -> Result<
                 whirlpool: ctx.accounts.whirlpool.to_account_info(),
                 token_program: ctx.accounts.token_program.to_account_info(),
                 token_authority: ctx.accounts.manager.to_account_info(),
-                token_owner_account_a: token_owner_vault_a,
+                token_owner_account_a: ctx.accounts.manager_vault_a.to_account_info(),
                 token_vault_a: ctx.accounts.token_vault_a.to_account_info(),
-                token_owner_account_b: token_owner_vault_b,
+                token_owner_account_b: ctx.accounts.manager_vault_b.to_account_info(),
                 token_vault_b: ctx.accounts.token_vault_b.to_account_info(),
                 tick_array_0: ctx.accounts.tick_array_0.to_account_info(),
                 tick_array_1: ctx.accounts.tick_array_1.to_account_info(),
