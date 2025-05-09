@@ -1,8 +1,9 @@
 use {
     crate::state::*,
     crate::error::ErrorCode,
+    crate::permission::{verify_deposit_mint, verify_permission},
     anchor_lang::prelude::*,
-    anchor_spl::token_interface::{Mint, TokenInterface, TokenAccount},
+    anchor_spl::token_interface::{TokenInterface, TokenAccount},
     whirlpool_cpi::{program::Whirlpool as WhirlpoolProgram, state::Whirlpool},
 };
 
@@ -41,11 +42,6 @@ pub struct OrcaSwap<'info> {
         constraint = manager.authority == signer.key() @ErrorCode::IncorrectSigner
     )]
     pub manager: Box<Account<'info, Manager>>,
-
-    // to do: should be wirlpool_mint_a and wirlpool_mint_b
-    // to-do: apply chack deposit mint is in the transaction
-    pub input_mint: Box<InterfaceAccount<'info, Mint>>,
-    pub output_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         mut,
@@ -90,6 +86,24 @@ pub struct OrcaSwap<'info> {
 
 pub fn handler<'info>(ctx: Context<OrcaSwap>, params: OrcaSwapParams) -> Result<()> {
     let manager = &ctx.accounts.manager;
+    let signer = &ctx.accounts.signer;
+    let deposit_mint = &ctx.accounts.order.deposit_mint;
+    let manager_vault_a = &ctx.accounts.manager_vault_a;
+    let manager_vault_b = &ctx.accounts.manager_vault_b;
+
+    verify_deposit_mint(deposit_mint, manager_vault_a, manager_vault_b, &ctx.accounts.order)?;
+
+    let (deposit_vault, token_vault) = if manager_vault_a.mint == *deposit_mint {
+        (&manager_vault_a, &manager_vault_b)
+    } else if manager_vault_b.mint == *deposit_mint {
+        (&manager_vault_b, &manager_vault_a)
+    } else {
+        return Err(ErrorCode::IncorrectMint.into());
+    };
+
+    // Verify permissions at the beginning
+    verify_permission(signer, deposit_vault, token_vault, manager, false)?;
+
     let signer_seeds = &[
         b"manager".as_ref(),
         manager.project.as_ref(),
