@@ -5,7 +5,7 @@ A Solana program that creates vaults controlled by a delegate wallet in a crank 
 ## Overview
 
 The Delegate Vault program allows users to:
-- Create managed vaults for automated trading and liquidity provision
+- Create managed vaults for automated trading and liquidity provision (only for liquidation)
 - Deposit funds and execute token swaps
 - Participate in Orca liquidity pools with automated position management
 - Configure automated liquidation triggers through a delegate service
@@ -21,7 +21,6 @@ The Delegate Vault program allows users to:
 
 2. **Order Account**: Tracks individual order details and positions
    - Stores deposit information
-   - Links to associated vaults
    - Used for performance fee calculations
 
 3. **Project Account**: Manages project-level configurations
@@ -38,19 +37,18 @@ The Delegate Vault program allows users to:
 ### 2. Position Management
 #### Opening Positions (Tx2)
 - Swap to token vault (do 50% of order vault amount for orca lps)
-  - Creates a token vault
+  - Creates token vault(s)
   - Execute token swaps via Jupiter/Orca
 (Tx3)
 - Open position and increase liquidity in case is an orca order
 
 ### 3. Liquidation Flow (Tx4)
-- Triggered by delegate wallet
+- Triggered by delegate wallet or user
 - Decrease liquidity and collect fees in case is an orca order
-- Swap back to deposit mint
+- Swap back to deposit mint (can happen two swaps to comeback to the user initial position)
 - Close token vault positions, return SOL rent to users
 
 ### 4. Withdrawal Flow (Tx5)
-- User can also liquidate the position, if not done
 - Get performance fee
 - Close order and order vault, return SOL rent to users
 
@@ -68,11 +66,8 @@ The Delegate Vault program allows users to:
   - `init_manager.rs` - Manager initialization
   - `deposit.rs` - Deposit handling
   - `withdraw.rs` - Withdrawal processing
-  - `orca/` - Orca integration instructions
-    - Position management (open, close)
-    - Liquidity operations (increase, decrease)
-    - Fee collection
-  - `jup/` - Jupiter integration
+  - `orca/` - Orca integration instructions (open, close, swap and liquidation)
+  - `jup/` - Jupiter integration (swap and liquidation)
 - `error.rs` - Custom error definitions
 
 ## Development versions
@@ -80,3 +75,22 @@ The Delegate Vault program allows users to:
 solana-cli 2.0.21
 anchor-cli 0.30.1
 rustc 1.79.0
+
+## Testing
+
+To run tests, follow these steps:
+
+1. Prepare test keys:
+```
+bun run test:prepare
+```
+
+2. Run project tests:
+```
+bun run test:project
+```
+
+3. Run specific tests:
+```
+bun run test:<test-name>
+```

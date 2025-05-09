@@ -3,7 +3,7 @@
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "test": "bun test",
-    "test:index": "bun test ./tests/index.ts --timeout 10000",
+    "test:project": "bun test ./tests/index.ts --timeout 10000",
     "test:user": "bun test ./tests/user.ts --timeout 10000",
     "test:delegate": "bun test ./tests/delegate.ts --timeout 10000",
     "test:orca": "bun test ./tests/orca.ts --timeout 15000",
