@@ -4,18 +4,18 @@
 resolution = true
 skip-lint = false
 
-[programs.devnet]
+[programs.mainnet]
 delegate_vault = "AHNJKkm4Gd3FpUrdhYsuvf7tPErUpR8dgmx6xNPSHNuc"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "mainnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/index.ts"
 deploy-mainnet = "solana program deploy target/deploy/delegate_vault.so --program-id target/deploy/delegate_vault-keypair.json -C ~/.config/solana/cli/config.yml --use-rpc --with-compute-unit-price 10"
 idl-init = "anchor idl init -f target/idl/delegate_vault.json AHNJKkm4Gd3FpUrdhYsuvf7tPErUpR8dgmx6xNPSHNuc --provider.wallet ~/.config/solana/id.json"
 extend = "solana program extend AHNJKkm4Gd3FpUrdhYsuvf7tPErUpR8dgmx6xNPSHNuc 200000 -C ~/.config/solana/cli/config.yml -k ~/.config/solana/id.json"

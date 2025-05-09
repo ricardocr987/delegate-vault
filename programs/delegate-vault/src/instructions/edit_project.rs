@@ -30,6 +30,6 @@ pub fn handler<'info>(
     }
 
     (*ctx.accounts.project).performance_fee = performance_fee;
-    
+
     Ok(())
 }

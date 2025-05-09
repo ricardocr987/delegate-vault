@@ -18,4 +18,22 @@ pub enum ErrorCode {
     IncorrectProject,
     #[msg("Incorrect manager")]
     IncorrectManager,
+    #[msg("Delegate is not allowed")]
+    DelegateNotAllowed,
+    #[msg("Invalid remaining accounts provided")]
+    InvalidRemainingAccounts,
+    #[msg("Invalid token program provided")]
+    InvalidTokenProgram,
+    #[msg("Duplicate mints not allowed")]
+    DuplicateMints,
+    #[msg("Invalid source token account")]
+    InvalidSourceTokenAccount,
+    #[msg("Invalid destination token account")]
+    InvalidDestinationTokenAccount,
+    #[msg("Invalid transfer authority")]
+    InvalidTransferAuthority,
+    #[msg("Invalid Jupiter route instruction")]
+    InvalidJupiterRoute,
+    #[msg("Order vault is empty")]
+    EmptyOrderVault,
 }

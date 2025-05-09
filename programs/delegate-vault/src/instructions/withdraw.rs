@@ -22,7 +22,7 @@ pub struct Withdraw<'info> {
         ],
         bump,
         constraint = order.manager == manager.key() @ErrorCode::IncorrectManager,
-        close = signer,
+        close = signer, // close the order vault
     )]
     pub order: Box<Account<'info, Order>>,
 
@@ -33,7 +33,7 @@ pub struct Withdraw<'info> {
             signer.key().as_ref(),
         ],
         bump = manager.bump,
-        constraint = manager.authority == signer.key() @ErrorCode::IncorrectSigner,
+        constraint = manager.authority == signer.key() @ErrorCode::IncorrectSigner, // only user can withdraw
         constraint = manager.project == project.key() @ErrorCode::IncorrectProject
     )]
     pub manager: Account<'info, Manager>,
@@ -92,6 +92,10 @@ pub fn handler<'info>(ctx: Context<Withdraw>) -> Result<()> {
     ];
 
     let current_amount = ctx.accounts.order_vault.amount;
+    if current_amount == 0 {
+        return Err(ErrorCode::EmptyOrderVault.into());
+    }
+    
     let deposit_amount = ctx.accounts.order.deposit_amount;    
     let profit = if current_amount > deposit_amount {
         current_amount - deposit_amount

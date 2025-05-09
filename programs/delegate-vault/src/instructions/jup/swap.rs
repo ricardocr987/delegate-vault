@@ -1,10 +1,7 @@
 use {
-    crate::state::*,
-    crate::error::ErrorCode,
-    anchor_lang::prelude::*,
-    anchor_spl::token_interface::{Mint, TokenInterface, TokenAccount},
-    crate::jupiter_aggregator::program::Jupiter,
-    anchor_lang::solana_program::{instruction::Instruction, program::invoke_signed},
+    crate::{error::ErrorCode, jupiter_aggregator::program::Jupiter, permission::{verify_deposit_mint, verify_permission, is_jupiter_instruction, JUPITER_SHARED_ACCOUNTS_ROUTE_DISCRIMINATOR, JUPITER_SHARED_ACCOUNTS_ROUTE_WITH_TOKEN_LEDGER_DISCRIMINATOR, JUPITER_SHARED_ACCOUNTS_EXACT_OUT_ROUTE_DISCRIMINATOR}, state::*},
+    anchor_lang::{prelude::*, solana_program::{instruction::Instruction, program::invoke_signed}},
+    anchor_spl::token_interface::TokenAccount,
 };
 
 #[derive(Accounts)]
@@ -27,44 +24,88 @@ pub struct Swap<'info> {
         seeds = [
             b"manager".as_ref(),
             manager.project.as_ref(),
-            signer.key().as_ref(),
+            signer.key().as_ref(), // this derivation makes only possible the manager authority to be the user
         ],
         bump = manager.bump,
         constraint = manager.authority == signer.key() @ErrorCode::IncorrectSigner
     )]
     pub manager: Box<Account<'info, Manager>>,
-
     #[account(
         mut,
-        constraint = token_vault.owner == manager.key() @ErrorCode::IncorrectOwner
+        constraint = manager_vault_a.owner == manager.key() @ErrorCode::IncorrectManager
     )]
-    pub order_vault: InterfaceAccount<'info, TokenAccount>,
-
-    pub output_mint: InterfaceAccount<'info, Mint>,
-    pub output_mint_program: Interface<'info, TokenInterface>,
-
+    pub manager_vault_a: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(
-        init,
-        payer = signer,
-        seeds = [
-            b"token_vault".as_ref(),
-            signer.key().as_ref(),
-            manager.key().as_ref(),
-            order.key().as_ref(),
-            output_mint.key().as_ref(),
-        ],
-        bump,
-        token::mint = output_mint,
-        token::authority = manager,
-        token::token_program = output_mint_program,
+        mut,
+        constraint = manager_vault_b.owner == manager.key() @ErrorCode::IncorrectManager
     )]
-    pub token_vault: InterfaceAccount<'info, TokenAccount>,
+    pub manager_vault_b: Box<InterfaceAccount<'info, TokenAccount>>,
     pub jupiter_program: Program<'info, Jupiter>,
-    pub system_program: Program<'info, System>,
 }
 
 pub fn handler<'info>(ctx: Context<Swap>, data: Vec<u8>) -> Result<()> {
     let manager = &ctx.accounts.manager;
+    let signer = &ctx.accounts.signer;
+    let deposit_mint = &ctx.accounts.order.deposit_mint;
+    let manager_vault_a = &ctx.accounts.manager_vault_a;
+    let manager_vault_b = &ctx.accounts.manager_vault_b;
+
+    verify_deposit_mint(deposit_mint, manager_vault_a, manager_vault_b, &ctx.accounts.order)?;
+
+    let (deposit_vault, token_vault) = if manager_vault_a.mint == *deposit_mint {
+        (&manager_vault_a, &manager_vault_b)
+    } else if manager_vault_b.mint == *deposit_mint {
+        (&manager_vault_b, &manager_vault_a)
+    } else {
+        return Err(ErrorCode::IncorrectMint.into());
+    };
+
+    // Verify permissions at the beginning
+    verify_permission(signer, deposit_vault, token_vault, manager, false)?;
+
+    // Verify that the instruction data is a valid Jupiter instruction
+    if !is_jupiter_instruction(&data) {
+        return Err(ErrorCode::InvalidJupiterRoute.into());
+    }
+
+    if ctx.remaining_accounts.len() < 6 {
+        return Err(ErrorCode::InvalidRemainingAccounts.into());
+    }
+
+    // Parse discriminator
+    let discriminator = &data[0..8];
+    let is_shared_accounts_route =
+        discriminator == JUPITER_SHARED_ACCOUNTS_ROUTE_DISCRIMINATOR ||
+        discriminator == JUPITER_SHARED_ACCOUNTS_ROUTE_WITH_TOKEN_LEDGER_DISCRIMINATOR ||
+        discriminator == JUPITER_SHARED_ACCOUNTS_EXACT_OUT_ROUTE_DISCRIMINATOR;
+
+    // Select indices based on instruction type
+    let (transfer_authority_idx, source_token_account_idx, destination_token_account_idx) = if is_shared_accounts_route {
+        (2, 3, 4)
+    } else {
+        (1, 2, 4)
+    };
+
+    let transfer_authority = &ctx.remaining_accounts[transfer_authority_idx].key();
+    let source_token_account = &ctx.remaining_accounts[source_token_account_idx].key();
+    let destination_token_account = &ctx.remaining_accounts[destination_token_account_idx].key();
+
+    // Validate that transfer authority is the manager
+    if transfer_authority != &manager.key() {
+        return Err(ErrorCode::InvalidTransferAuthority.into());
+    }
+
+    // Validate source token account matches one of the manager vaults
+    if source_token_account != &manager_vault_a.key() && source_token_account != &manager_vault_b.key() {
+        return Err(ErrorCode::InvalidSourceTokenAccount.into());
+    }
+
+    // Validate destination token account matches one of the manager vaults
+    if destination_token_account != &manager_vault_a.key() && destination_token_account != &manager_vault_b.key() {
+        return Err(ErrorCode::InvalidDestinationTokenAccount.into());
+    }
+
+    // make sure the manager is signer in the transaction
     let accounts: Vec<AccountMeta> = ctx
         .remaining_accounts
         .iter()

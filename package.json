@@ -1,20 +1,41 @@
 {
-  "license": "ISC",  
+  "license": "ISC",
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
-    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
+    "test": "bun test",
+    "test:index": "bun test ./tests/index.ts --timeout 10000",
+    "test:user": "bun test ./tests/user.ts --timeout 10000",
+    "test:delegate": "bun test ./tests/delegate.ts --timeout 10000",
+    "test:orca": "bun test ./tests/orca.ts --timeout 15000",
+    "test:jup": "bun test ./tests/jup.ts --timeout 15000",
+    "test:fees": "bun test ./tests/fees.ts --timeout 10000",
+    "test:prepare": "bun test ./tests/prepare.ts --timeout 10000",
+    "test:watch": "bun test --watch"
   },
   "dependencies": {
-    "@coral-xyz/anchor": "^0.30.1"
+    "@coral-xyz/anchor": "^0.30.1",
+    "@orca-so/common-sdk": "^0.6.11",
+    "@orca-so/whirlpools": "^2.0.0",
+    "@orca-so/whirlpools-client": "^1.0.7",
+    "@orca-so/whirlpools-core": "^1.0.4",
+    "@solana-program/compute-budget": "^0.7.0",
+    "@solana-program/system": "^0.7.0",
+    "@solana-program/token": "^0.5.1",
+    "@solana/kit": "^2.1.0",
+    "@solana/spl-token": "^0.4.13",
+    "@types/bs58": "^5.0.0",
+    "decimal.js": "^10.5.0",
+    "ky": "^1.8.1"
   },
   "devDependencies": {
-    "chai": "^4.3.4",
-    "mocha": "^9.0.3",
-    "ts-mocha": "^10.0.0",
     "@types/bn.js": "^5.1.0",
     "@types/chai": "^4.3.0",
     "@types/mocha": "^9.0.0",
-    "typescript": "^4.3.5",
-    "prettier": "^2.6.2"
+    "bs58": "^6.0.0",
+    "chai": "^4.3.4",
+    "mocha": "^9.0.3",
+    "prettier": "^2.6.2",
+    "ts-mocha": "^10.0.0",
+    "typescript": "^4.3.5"
   }
 }

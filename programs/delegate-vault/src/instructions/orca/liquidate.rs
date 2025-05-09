@@ -1,6 +1,7 @@
 use {
     crate::state::*,
     crate::error::ErrorCode,
+    crate::permission:: verify_permission,
     anchor_lang::prelude::*,
     anchor_spl::token_interface::{TokenInterface, TokenAccount, CloseAccount, close_account},
     whirlpool_cpi::{program::Whirlpool as WhirlpoolProgram, state::Whirlpool},
@@ -52,31 +53,21 @@ pub struct OrcaLiquidate<'info> {
 
     #[account(
         mut,
-        seeds = [
-            b"order_vault".as_ref(),
-            user.key().as_ref(),
-            manager.key().as_ref(),
-            order.key().as_ref(),
-            order_vault.mint.key().as_ref(),
-        ],
-        bump,
-        constraint = order_vault.owner == manager.key() @ErrorCode::IncorrectOwner
+        constraint = manager_vault_a.owner == manager.key() @ErrorCode::IncorrectOwner
     )]
-    pub order_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub manager_vault_a: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
-        seeds = [
-            b"token_vault".as_ref(),
-            user.key().as_ref(),
-            manager.key().as_ref(),
-            order.key().as_ref(),
-            token_vault.mint.key().as_ref(),
-        ],
-        bump,
-        constraint = token_vault.owner == manager.key() @ErrorCode::IncorrectOwner
+        constraint = manager_vault_b.owner == manager.key() @ErrorCode::IncorrectOwner
     )]
-    pub token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub manager_vault_b: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(mut, constraint = token_vault_a.key() == whirlpool.token_vault_a)]
+    pub token_vault_a: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(mut, constraint = token_vault_b.key() == whirlpool.token_vault_b)]
+    pub token_vault_b: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(mut)]
     /// CHECK: checked by whirlpool_program
@@ -100,6 +91,22 @@ pub struct OrcaLiquidate<'info> {
 
 pub fn handler<'info>(ctx: Context<OrcaLiquidate>, params: OrcaLiquidateParams) -> Result<()> {
     let manager = &ctx.accounts.manager;
+    let signer = &ctx.accounts.signer;
+    let deposit_mint = &ctx.accounts.order.deposit_mint;
+    let manager_vault_a = &ctx.accounts.manager_vault_a;
+    let manager_vault_b = &ctx.accounts.manager_vault_b;
+    
+    let (deposit_vault, token_vault) = if manager_vault_a.mint == *deposit_mint {
+        (&manager_vault_a, &manager_vault_b)
+    } else if manager_vault_b.mint == *deposit_mint {
+        (&manager_vault_b, &manager_vault_a)
+    } else {
+        return Err(ErrorCode::IncorrectMint.into());
+    };
+
+    // Verify permissions at the beginning
+    verify_permission(signer, deposit_vault, token_vault, manager, true)?;
+
     let signer_seeds = &[
         b"manager".as_ref(),
         manager.project.as_ref(),
@@ -116,9 +123,9 @@ pub fn handler<'info>(ctx: Context<OrcaLiquidate>, params: OrcaLiquidateParams) 
                 token_program: ctx.accounts.token_program.to_account_info(),
                 token_authority: ctx.accounts.manager.to_account_info(),
                 token_owner_account_a: ctx.accounts.manager.to_account_info(),
-                token_vault_a: ctx.accounts.order_vault.to_account_info(),
+                token_vault_a: ctx.accounts.token_vault_a.to_account_info(),
                 token_owner_account_b: ctx.accounts.manager.to_account_info(),
-                token_vault_b: ctx.accounts.token_vault.to_account_info(),
+                token_vault_b: ctx.accounts.token_vault_b.to_account_info(),
                 tick_array_0: ctx.accounts.tick_array_0.to_account_info(),
                 tick_array_1: ctx.accounts.tick_array_1.to_account_info(),
                 tick_array_2: ctx.accounts.tick_array_2.to_account_info(),
@@ -133,13 +140,13 @@ pub fn handler<'info>(ctx: Context<OrcaLiquidate>, params: OrcaLiquidateParams) 
         params.a_to_b,
     )?;
 
-    // Close the token vault and send remaining funds to the order vault
+    // Close the token vault and send remaining funds to the user
     close_account(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
             CloseAccount {
-                account: ctx.accounts.token_vault.to_account_info(),
-                destination: ctx.accounts.order_vault.to_account_info(),
+                account: token_vault.to_account_info(),
+                destination: ctx.accounts.user.to_account_info(),
                 authority: ctx.accounts.manager.to_account_info(),
             },
             &[&signer_seeds[..]],

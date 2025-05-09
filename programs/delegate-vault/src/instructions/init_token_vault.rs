@@ -5,15 +5,6 @@ use {
     anchor_spl::token_interface::{Mint, TokenInterface, TokenAccount},
 };
 
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct OrcaSwapParams {
-    amount: u64,
-    other_amount_threshold: u64,
-    sqrt_price_limit: u128,
-    amount_specified_is_input: bool,
-    a_to_b: bool,
-}
-
 #[derive(Accounts)]
 pub struct InitTokenVault<'info> {
     #[account(mut)]
@@ -37,7 +28,7 @@ pub struct InitTokenVault<'info> {
             signer.key().as_ref(),
         ],
         bump = manager.bump,
-        constraint = manager.authority == signer.key() @ErrorCode::IncorrectSigner
+        constraint = manager.authority == signer.key() @ErrorCode::IncorrectSigner // only user can create vaults
     )]
     pub manager: Box<Account<'info, Manager>>,
 
