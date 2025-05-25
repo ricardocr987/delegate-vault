@@ -1,6 +1,6 @@
 # Delegate Vault
 
-A Solana program that creates vaults controlled by a delegate wallet in a crank service to trigger liquidation on a user portfolio. This program enables automated portfolio and liquidity pool management with stop-loss, take-profit, and time-based liquidation capabilities.
+A Solana program that creates vaults controlled by a purse delegated to a crank service to trigger settlement in a user's portfolio. This program allows automated management of portfolios and liquidity pools for the purpose of establishing stop-loss, take-profit and time-dependent settlement capabilities.
 
 ## Overview
 
@@ -15,7 +15,7 @@ The Delegate Vault program allows users to:
 
 ### Accounts
 1. **Manager Account**: Controls multiple vaults and manages permissions
-   - Authority (User wallet) - Can deposit, swap, and withdraw
+   - Authority (User wallet) - Can deposit, swap, modify liquidity, liquidate and withdraw
    - Delegate (Service wallet) - Can trigger liquidations
    - Project - Associates the manager with a specific project
 
@@ -29,6 +29,8 @@ The Delegate Vault program allows users to:
 
 ## Transaction Flow
 
+Users would need to sign multiple transaction to set-up the order: Tx1, Tx2 and Tx3 (in case is an orca order)
+
 ### 1. Initial Setup (Tx1)
 - Initialize manager account (if not done before)
 - Deposit funds to order vault
@@ -39,8 +41,9 @@ The Delegate Vault program allows users to:
 - Swap to token vault (do 50% of order vault amount for orca lps)
   - Creates token vault(s)
   - Execute token swaps via Jupiter/Orca
-(Tx3)
-- Open position and increase liquidity in case is an orca order
+ 
+#### Orca position (Tx3)
+- Open orca position and increase liquidity
 
 ### 3. Liquidation Flow (Tx4)
 - Triggered by delegate wallet or user
