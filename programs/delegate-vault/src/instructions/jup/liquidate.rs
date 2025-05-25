@@ -86,7 +86,7 @@ pub fn handler<'info>(ctx: Context<JupLiquidate>, data: Vec<u8>) -> Result<()> {
 
     // Select indices based on instruction type
     let (transfer_authority_idx, source_token_account_idx, destination_token_account_idx, destination_mint_idx) = if is_shared_accounts_route {
-        (2, 3, 4, 8)
+        (2, 3, 6, 8)
     } else {
         (1, 2, 4, 5)
     };
