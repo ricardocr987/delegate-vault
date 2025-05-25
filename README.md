@@ -52,7 +52,6 @@ Users would need to sign multiple transaction to set-up the order: Tx1, Tx2 and 
 - Close token vault positions, return SOL rent to users
 
 ### 4. Withdrawal Flow (Tx5)
-- User can also liquidate the position on Tx5, if not done by delegate yet
 - Get performance fee
 - Close order and order vault, return SOL rent to users
 
@@ -76,6 +75,25 @@ Users would need to sign multiple transaction to set-up the order: Tx1, Tx2 and 
 
 ## Development versions
 
-- solana-cli 2.0.21
-- anchor-cli 0.30.1
-- rustc 1.79.0
+solana-cli 2.0.21
+anchor-cli 0.30.1
+rustc 1.79.0
+
+## Testing
+
+To run tests, follow these steps:
+
+1. Prepare test keys:
+```
+bun run test:prepare
+```
+
+2. Run project tests:
+```
+bun run test:project
+```
+
+3. Run specific tests:
+```
+bun run test:<test-name>
+```
