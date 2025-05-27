@@ -79,6 +79,14 @@ solana-cli 2.0.21
 anchor-cli 0.30.1
 rustc 1.79.0
 
+## Building:
+
+- anchor build
+
+If use encounter some proc_macro2 issues:
+
+- RUSTUP_TOOLCHAIN=nightly-2024-11-19 anchor build
+
 ## Testing
 
 To run tests, follow these steps:

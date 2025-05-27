@@ -82,4 +82,4 @@ export const REFERRAL_ADMIN_ADDRESS =
 export const JUPITER_PROGRAM =
   "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
 export const DELEGATE_VAULT_PROGRAM =
-  "AHNJKkm4Gd3FpUrdhYsuvf7tPErUpR8dgmx6xNPSHNuc" as Address;
+  "frnxh6RXdbpvTbhQ8yRtEbLNnXKmbGEqwfwMpZaBRw9" as Address;
