@@ -23,7 +23,7 @@ pub struct InitProject<'info> {
     pub sol_mint: InterfaceAccount<'info, Mint>,
     pub usdc_mint: InterfaceAccount<'info, Mint>,
     #[account(
-        init, 
+        init_if_needed, 
         payer = signer, 
         associated_token::mint = sol_mint, 
         associated_token::authority = project, 
@@ -31,7 +31,7 @@ pub struct InitProject<'info> {
     )]
     pub sol_vault: InterfaceAccount<'info, TokenAccount>,
     #[account(
-        init, 
+        init_if_needed, 
         payer = signer, 
         associated_token::mint = usdc_mint, 
         associated_token::authority = project, 
