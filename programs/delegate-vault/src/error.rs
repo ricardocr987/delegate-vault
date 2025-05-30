@@ -36,4 +36,14 @@ pub enum ErrorCode {
     InvalidJupiterRoute,
     #[msg("Order vault is empty")]
     EmptyOrderVault,
+    #[msg("Incorrect config")]
+    IncorrectConfig,
+    #[msg("Incorrect payment receiver")]
+    IncorrectReceiver,
+    #[msg("Incorrect payment mint")]
+    IncorrectPaymentMint,
+    #[msg("Payment amount must be either monthly (49 USDC) or yearly (499 USDC)")]
+    IncorrectPaymentAmount,
+    #[msg("Arithmetic overflow occurred")]
+    ArithmeticOverflow,
 }

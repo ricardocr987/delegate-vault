@@ -5,7 +5,6 @@ use {
         associated_token::AssociatedToken,
         token_interface::{close_account, transfer_checked, CloseAccount, Mint, TokenAccount, TokenInterface, TransferChecked},
     },
-    std::str::FromStr,
 };
 
 #[derive(Accounts)]
@@ -30,24 +29,25 @@ pub struct Withdraw<'info> {
     #[account(
         seeds = [
             b"manager".as_ref(),
-            project.key().as_ref(),
             signer.key().as_ref(),
         ],
         bump = manager.bump,
         constraint = manager.authority == signer.key() @ErrorCode::IncorrectSigner, // only user can withdraw
-        constraint = manager.project == project.key() @ErrorCode::IncorrectProject
     )]
     pub manager: Account<'info, Manager>,
 
     #[account(
+        mut,
         seeds = [
-            b"project".as_ref(),
-            project.authority.as_ref(),
+            b"config".as_ref(),
         ],
-        bump = project.bump,
-        constraint = project.key() == Pubkey::from_str("CThXy1nb8YgSDjKpWRn4znasTbEdmXggJ9hoHEMdYfiQ").unwrap() @ErrorCode::IncorrectProject
+        bump = config.bump,
     )]
-    pub project: Account<'info, Project>,
+    pub config: Box<Account<'info, Config>>,
+
+    /// CHECK: only validate address
+    #[account(constraint = performance_receiver.key() == config.performance_receiver @ErrorCode::IncorrectReceiver)]
+    pub performance_receiver: AccountInfo<'info>,
 
     #[account(
         mut,
@@ -72,7 +72,7 @@ pub struct Withdraw<'info> {
     #[account(
         mut,
         associated_token::mint=deposit_mint,
-        associated_token::authority=project,
+        associated_token::authority=performance_receiver,
         associated_token::token_program=token_program,
     )]
     pub fee_vault: InterfaceAccount<'info, TokenAccount>,
@@ -88,7 +88,6 @@ pub fn handler<'info>(ctx: Context<Withdraw>) -> Result<()> {
     let manager = &ctx.accounts.manager;
     let seeds = &[
         b"manager".as_ref(),
-        manager.project.as_ref(),
         manager.authority.as_ref(),
         &[manager.bump],
     ];
@@ -107,8 +106,18 @@ pub fn handler<'info>(ctx: Context<Withdraw>) -> Result<()> {
     
     // Calculate performance fee only if there is profit
     let performance_fee = if profit > 0 {
-        // Calculate 20% of profit, flooring any decimal places
-        let performance_fee = (ctx.accounts.project.performance_fee as u128)
+        // Check if user has active subscription
+        let current_time = Clock::get()?.unix_timestamp;
+        let fee_rate = if manager.end_subscription > current_time {
+            // User has active subscription, use subscribed rate
+            ctx.accounts.config.subscribed_performance_fee
+        } else {
+            // User not subscribed, use regular rate
+            ctx.accounts.config.performance_fee
+        };
+
+        // Calculate fee based on the appropriate rate
+        let performance_fee = (fee_rate as u128)
             .checked_mul(profit as u128)
             .ok_or(ErrorCode::NumericalOverflow)?
             .checked_div(10000)

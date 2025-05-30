@@ -34,7 +34,6 @@ pub struct ClosePosition<'info> {
   #[account(
       seeds = [
           b"manager".as_ref(),
-          manager.project.as_ref(),
           manager.authority.as_ref(),
       ],
       bump = manager.bump,
@@ -105,7 +104,6 @@ pub fn handler(
 
   let signer_seeds = &[
       b"manager".as_ref(),
-      manager.project.as_ref(),
       manager.authority.as_ref(),
       &[manager.bump],
   ];

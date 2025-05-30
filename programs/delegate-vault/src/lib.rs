@@ -14,28 +14,24 @@ declare_id!("frnxh6RXdbpvTbhQ8yRtEbLNnXKmbGEqwfwMpZaBRw9");
 pub mod delegate_vault {
     use super::*;
 
-    pub fn init_project(ctx: Context<InitProject>, performance_fee: u16) -> Result<()> {
-        init_project::handler(ctx, performance_fee)
+    pub fn init(ctx: Context<Init>, params: InitParams) -> Result<()> {
+        init::handler(ctx, params)
     }
 
-    pub fn edit_project_fee(ctx: Context<EditProjectFee>, performance_fee: u16) -> Result<()> {
-        edit_project::handler(ctx, performance_fee)
-    }
-
-    pub fn withdraw_fees(ctx: Context<WithdrawFees>) -> Result<()> {
-        withdraw_fees::handler(ctx)
+    pub fn edit_config(ctx: Context<EditConfig>, performance_fee: u16) -> Result<()> {
+        edit_config::handler(ctx, performance_fee)
     }
 
     pub fn init_manager(ctx: Context<InitManager>) -> Result<()> {
         init_manager::handler(ctx)
     }
 
-    pub fn init_token_vault(ctx: Context<InitTokenVault>) -> Result<()> {
-        init_token_vault::handler(ctx)
+    pub fn pay_subscription(ctx: Context<PaySubscription>, amount: u64) -> Result<()> {
+        pay_subscription::handler(ctx, amount)
     }
 
-    pub fn close_token_vault(ctx: Context<CloseTokenVault>) -> Result<()> {
-        close_token_vault::handler(ctx)
+    pub fn init_token_vault(ctx: Context<InitTokenVault>) -> Result<()> {
+        init_token_vault::handler(ctx)
     }
 
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {

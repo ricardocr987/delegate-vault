@@ -35,7 +35,6 @@ pub struct OpenPosition<'info> {
       mut,
       seeds = [
           b"manager".as_ref(),
-          manager.project.as_ref(),
           signer.key().as_ref(),
       ],
       bump = manager.bump,
@@ -102,7 +101,6 @@ pub fn handler(
 
   let signer_seeds = &[
       b"manager".as_ref(),
-      manager.project.as_ref(),
       manager.authority.as_ref(),
       &[manager.bump],
   ];
@@ -149,7 +147,6 @@ pub fn handler(
         },
         &[&[
           b"manager".as_ref(),
-          manager.project.as_ref(),
           manager.authority.as_ref(),
           &[manager.bump],
       ]],

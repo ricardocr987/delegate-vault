@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeAll } from "bun:test";
+ AccountInfo<'info>import { describe, test, expect, beforeAll } from "bun:test";
 import * as anchor from "@coral-xyz/anchor";
 import { Program, translateAddress } from "@coral-xyz/anchor";
 import { DelegateVault } from "../target/types/delegate_vault";
@@ -156,7 +156,7 @@ describe("delegate-vault setup", () => {
       console.log("Transaction signature (init project):", signature);
       await delay(1000);
 
-      const projectAccount = await program.account.project.fetch(
+      const projectAccount = await program.account.config.fetch(
         anchor.translateAddress(project)
       );
       expect(projectAccount.authority.toString()).toBe(projectOwnerAddress);
@@ -197,7 +197,7 @@ describe("delegate-vault setup", () => {
       console.log("Transaction signature (edit fee):", signature);
       await delay(1000);
 
-      const projectAccount = await program.account.project.fetch(
+      const projectAccount = await program.account.config.fetch(
         anchor.translateAddress(project)
       );
       expect(projectAccount.performanceFee).toBe(200);

@@ -24,7 +24,6 @@ pub struct JupLiquidate<'info> {
     #[account(
         seeds = [
             b"manager".as_ref(),
-            manager.project.as_ref(),
             manager.authority.as_ref(),
         ],
         bump = manager.bump,
@@ -139,7 +138,6 @@ pub fn handler<'info>(ctx: Context<JupLiquidate>, data: Vec<u8>) -> Result<()> {
 
     let signer_seeds = &[
         b"manager".as_ref(),
-        manager.project.as_ref(),
         manager.authority.as_ref(),
         &[manager.bump],
     ];
@@ -161,7 +159,7 @@ pub fn handler<'info>(ctx: Context<JupLiquidate>, data: Vec<u8>) -> Result<()> {
                 account: token_vault.to_account_info(),
                 destination: ctx.accounts.user.to_account_info(),
                 authority: ctx.accounts.manager.to_account_info(),
-        },
+            },
         &[&signer_seeds[..]],
     ))?;
 

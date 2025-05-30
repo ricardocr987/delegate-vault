@@ -23,7 +23,6 @@ pub struct Swap<'info> {
     #[account(
         seeds = [
             b"manager".as_ref(),
-            manager.project.as_ref(),
             signer.key().as_ref(), // this derivation makes only possible the manager authority to be the user
         ],
         bump = manager.bump,
@@ -127,7 +126,6 @@ pub fn handler<'info>(ctx: Context<Swap>, data: Vec<u8>) -> Result<()> {
 
     let signer_seeds = &[
         b"manager".as_ref(),
-        manager.project.as_ref(),
         manager.authority.as_ref(),
         &[manager.bump],
     ];

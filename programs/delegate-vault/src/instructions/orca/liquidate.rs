@@ -38,7 +38,6 @@ pub struct OrcaLiquidate<'info> {
         mut,
         seeds = [
             b"manager".as_ref(),
-            manager.project.as_ref(),
             manager.authority.as_ref(),
         ],
         bump = manager.bump,
@@ -109,7 +108,6 @@ pub fn handler<'info>(ctx: Context<OrcaLiquidate>, params: OrcaLiquidateParams) 
 
     let signer_seeds = &[
         b"manager".as_ref(),
-        manager.project.as_ref(),
         manager.authority.as_ref(),
         &[manager.bump],
     ];

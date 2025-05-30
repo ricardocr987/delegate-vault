@@ -35,7 +35,6 @@ pub struct OrcaSwap<'info> {
     #[account(
         seeds = [
             b"manager".as_ref(),
-            manager.project.as_ref(),
             signer.key().as_ref(),
         ],
         bump = manager.bump,
@@ -106,7 +105,6 @@ pub fn handler<'info>(ctx: Context<OrcaSwap>, params: OrcaSwapParams) -> Result<
 
     let signer_seeds = &[
         b"manager".as_ref(),
-        manager.project.as_ref(),
         manager.authority.as_ref(),
         &[manager.bump],
     ];

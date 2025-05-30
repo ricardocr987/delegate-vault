@@ -134,7 +134,7 @@ describe("user operations", () => {
         .initManager()
         .accountsPartial({
           signer: translateAddress(userAddress),
-          project: translateAddress(project.toString()),
+          project: translateAddress(config.toString()),
           delegate: translateAddress(delegateAddress),
           manager: translateAddress(manager.toString()),
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -168,7 +168,7 @@ describe("user operations", () => {
       const managerAccount = await program.account.manager.fetch(
         translateAddress(manager.toString())
       );
-      expect(managerAccount.project.toString()).toBe(project.toString());
+      expect(managerAccount.config.toString()).toBe(config.toString());
       expect(managerAccount.authority.toString()).toBe(userAddress);
       expect(managerAccount.delegate.toString()).toBe(userAddress);
     });

@@ -24,7 +24,6 @@ pub struct InitTokenVault<'info> {
     #[account(
         seeds = [
             b"manager".as_ref(),
-            manager.project.as_ref(),
             signer.key().as_ref(),
         ],
         bump = manager.bump,
