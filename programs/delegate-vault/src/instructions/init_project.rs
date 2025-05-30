@@ -20,8 +20,8 @@ pub struct InitProject<'info> {
         bump,
     )]
     pub project: Box<Account<'info, Project>>,
-    pub sol_mint: InterfaceAccount<'info, Mint>,
-    pub usdc_mint: InterfaceAccount<'info, Mint>,
+    pub sol_mint: Box<InterfaceAccount<'info, Mint>>,
+    pub usdc_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
         init_if_needed, 
         payer = signer, 
@@ -29,7 +29,7 @@ pub struct InitProject<'info> {
         associated_token::authority = project, 
         associated_token::token_program = token_program, 
     )]
-    pub sol_vault: InterfaceAccount<'info, TokenAccount>,
+    pub sol_vault: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(
         init_if_needed, 
         payer = signer, 
@@ -37,7 +37,7 @@ pub struct InitProject<'info> {
         associated_token::authority = project, 
         associated_token::token_program = token_program, 
     )]
-    pub usdc_vault: InterfaceAccount<'info, TokenAccount>,
+    pub usdc_vault: Box<InterfaceAccount<'info, TokenAccount>>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
