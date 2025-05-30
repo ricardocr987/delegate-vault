@@ -4,7 +4,8 @@ use {
     anchor_spl::{
         associated_token::AssociatedToken,
         token_interface::{close_account, transfer_checked, CloseAccount, Mint, TokenAccount, TokenInterface, TransferChecked},
-    }
+    },
+    std::str::FromStr,
 };
 
 #[derive(Accounts)]
@@ -44,6 +45,7 @@ pub struct Withdraw<'info> {
             project.authority.as_ref(),
         ],
         bump = project.bump,
+        constraint = project.key() == Pubkey::from_str("CThXy1nb8YgSDjKpWRn4znasTbEdmXggJ9hoHEMdYfiQ").unwrap() @ErrorCode::IncorrectProject
     )]
     pub project: Account<'info, Project>,
 
