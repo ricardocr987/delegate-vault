@@ -5,6 +5,7 @@ use {
         associated_token::AssociatedToken,
         token_interface::{close_account, transfer_checked, CloseAccount, Mint, TokenAccount, TokenInterface, TransferChecked},
     },
+    spl_math::precise_number::PreciseNumber,
 };
 
 #[derive(Accounts)]
@@ -106,11 +107,16 @@ pub fn handler<'info>(ctx: Context<Withdraw>) -> Result<()> {
         0
     };
     
+    // Constants for fee calculations
+    const BASIS_POINTS: u128 = 10000;  // 100% = 10000 basis points
+    
     // Calculate performance fee only if there is profit
     let performance_fee = if profit > 0 {
         // Check if user has active subscription
         let current_time = Clock::get()?.unix_timestamp;
-        let fee_rate = if manager.end_subscription > current_time {
+        
+        // Determine fee rate based on subscription status
+        let fee_rate: u16 = if manager.end_subscription > current_time {
             // User has active subscription, use subscribed rate
             ctx.accounts.config.subscribed_performance_fee
         } else {
@@ -118,13 +124,33 @@ pub fn handler<'info>(ctx: Context<Withdraw>) -> Result<()> {
             ctx.accounts.config.performance_fee
         };
 
-        // Calculate fee based on the appropriate rate
-        let performance_fee = (fee_rate as u128)
-            .checked_mul(profit as u128)
+        // Convert profit and fee rate to PreciseNumber for accurate calculation
+        let profit_precise = PreciseNumber::new(profit as u128)
+            .ok_or(ErrorCode::NumericalOverflow)?;
+        
+        // Convert fee rate from basis points (e.g., 250 = 2.50%) to decimal
+        let fee_rate_precise = PreciseNumber::new(fee_rate as u128)
+            .ok_or(ErrorCode::NumericalOverflow)?;
+            
+        let basis_points_precise = PreciseNumber::new(BASIS_POINTS)
+            .ok_or(ErrorCode::NumericalOverflow)?;
+
+        // Calculate fee rate in decimal form (divide by 10000)
+        let fee_rate_decimal = fee_rate_precise
+            .checked_div(&basis_points_precise)
+            .ok_or(ErrorCode::NumericalOverflow)?;
+
+        // Calculate fee amount: profit * fee_rate
+        let fee_amount_precise = profit_precise
+            .checked_mul(&fee_rate_decimal)
+            .ok_or(ErrorCode::NumericalOverflow)?;
+
+        // Convert back to u64
+        fee_amount_precise
+            .to_imprecise()
             .ok_or(ErrorCode::NumericalOverflow)?
-            .checked_div(10000)
-            .ok_or(ErrorCode::NumericalOverflow)? as u64;
-        performance_fee
+            .try_into()
+            .map_err(|_| ErrorCode::NumericalOverflow)?
     } else {
         0
     };

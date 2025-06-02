@@ -82,18 +82,19 @@ pub fn handler<'info>(ctx: Context<PaySubscription>, amount: u64) -> Result<()> 
         ctx.accounts.payment_mint.decimals,
     )?;
 
-    // Calculate subscription end date based on payment amount
-    let current_time = Clock::get()?.unix_timestamp;
-    let subscription_duration = if amount == config.yearly_amount {
-        // 365 days in seconds
-        365 * 24 * 60 * 60
+    // Constants for time calculations
+    const SECONDS_PER_DAY: i64 = 24 * 60 * 60;
+    const DAYS_PER_YEAR: i64 = 365;
+    const DAYS_PER_MONTH: i64 = 30;
+
+    let subscription_duration: i64 = if amount == config.yearly_amount {
+        SECONDS_PER_DAY * DAYS_PER_YEAR  // 31,536,000 seconds
     } else {
-        // 30 days in seconds
-        30 * 24 * 60 * 60
+        SECONDS_PER_DAY * DAYS_PER_MONTH // 2,592,000 seconds
     };
 
-    // If subscription hasn't expired, extend from current end date
-    // Otherwise extend from current time
+    // Calculate subscription end date based on payment amount
+    let current_time = Clock::get()?.unix_timestamp;
     let start_time = if manager.end_subscription > current_time {
         manager.end_subscription
     } else {
