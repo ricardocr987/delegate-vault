@@ -87,9 +87,10 @@ pub struct Withdraw<'info> {
 
 pub fn handler<'info>(ctx: Context<Withdraw>) -> Result<()> {
     let manager = &ctx.accounts.manager;
+    let signer_key = ctx.accounts.signer.key();
     let seeds = &[
         b"manager".as_ref(),
-        ctx.accounts.signer.key().as_ref(),
+        signer_key.as_ref(),
         &[manager.bump],
     ];
 

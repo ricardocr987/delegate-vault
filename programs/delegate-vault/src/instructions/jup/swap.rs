@@ -60,7 +60,9 @@ pub fn handler<'info>(ctx: Context<Swap>, data: Vec<u8>) -> Result<()> {
         return Err(ErrorCode::IncorrectMint.into());
     };
 
-    if deposit_vault.key() != &order.order_vault {
+    let order_vault = &order.order_vault;
+
+    if deposit_vault.key() != *order_vault {
         return Err(ErrorCode::IncorrectOrderVault.into());
     }
 
