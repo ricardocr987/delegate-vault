@@ -66,6 +66,7 @@ pub fn handler<'info>(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     order.id = ctx.accounts.id.key();
     order.manager = ctx.accounts.manager.key();
     order.deposit_mint = ctx.accounts.deposit_mint.key();
+    order.order_vault = ctx.accounts.order_vault.key();
     order.deposit_amount = amount;
     order.bump = ctx.bumps.order;
 

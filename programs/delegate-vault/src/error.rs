@@ -46,4 +46,6 @@ pub enum ErrorCode {
     IncorrectPaymentAmount,
     #[msg("Arithmetic overflow occurred")]
     ArithmeticOverflow,
+    #[msg("Incorrect order vault")]
+    IncorrectOrderVault,
 }

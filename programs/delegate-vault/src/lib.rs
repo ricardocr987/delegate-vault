@@ -50,21 +50,4 @@ pub mod delegate_vault {
     pub fn jup_liquidate(ctx: Context<JupLiquidate>, data: Vec<u8>) -> Result<()> {
         jup::liquidate::handler(ctx, data)
     }
-    
-    // ORCA
-    pub fn open_position(ctx: Context<OpenPosition>, params: OrcaOpenPositionParams) -> Result<()> {
-        orca::open_position::handler(ctx, params)
-    }
-
-    pub fn orca_swap(ctx: Context<OrcaSwap>, params: OrcaSwapParams) -> Result<()> {
-        orca::swap::handler(ctx, params)
-    }
-
-    pub fn orca_liquidate(ctx: Context<OrcaLiquidate>, params: OrcaLiquidateParams) -> Result<()> {
-        orca::liquidate::handler(ctx, params)
-    }
-
-    pub fn close_position(ctx: Context<ClosePosition>, params: OrcaClosePositionParams) -> Result<()> {
-        orca::close_position::handler(ctx, params)
-    }
 }

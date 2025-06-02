@@ -59,7 +59,8 @@ pub struct Withdraw<'info> {
             deposit_mint.key().as_ref(),
         ],
         bump,
-        constraint = order_vault.owner == manager.key() @ErrorCode::IncorrectOwner
+        constraint = order_vault.owner == manager.key() @ErrorCode::IncorrectOwner,
+        constraint = order_vault.key() == order.order_vault @ErrorCode::IncorrectOrderVault,
     )]
     pub order_vault: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(
@@ -88,7 +89,7 @@ pub fn handler<'info>(ctx: Context<Withdraw>) -> Result<()> {
     let manager = &ctx.accounts.manager;
     let seeds = &[
         b"manager".as_ref(),
-        manager.authority.as_ref(),
+        ctx.accounts.signer.key().as_ref(),
         &[manager.bump],
     ];
 

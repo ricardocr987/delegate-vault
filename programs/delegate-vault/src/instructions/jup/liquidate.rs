@@ -106,10 +106,13 @@ pub fn handler<'info>(ctx: Context<JupLiquidate>, data: Vec<u8>) -> Result<()> {
     }
 
     // Validate destination token account matches one of the vaults
-    if destination_token_account != &manager_vault_a.key() && destination_token_account != &manager_vault_b.key() {
-        if &order.deposit_mint != deposit_mint {
-            return Err(ErrorCode::InvalidDestinationTokenAccount.into());
-        }
+    if destination_token_account != &order.order_vault {
+        return Err(ErrorCode::InvalidDestinationTokenAccount.into());
+    }
+
+    // Validate destination mint matches the deposit mint
+    if &order.deposit_mint != deposit_mint {
+        return Err(ErrorCode::IncorrectMint.into());
     }
 
     // For shared_accounts_route, check destination mint at index 8

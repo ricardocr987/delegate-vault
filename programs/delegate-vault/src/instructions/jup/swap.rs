@@ -45,6 +45,7 @@ pub struct Swap<'info> {
 pub fn handler<'info>(ctx: Context<Swap>, data: Vec<u8>) -> Result<()> {
     let manager = &ctx.accounts.manager;
     let signer = &ctx.accounts.signer;
+    let order = &ctx.accounts.order;
     let deposit_mint = &ctx.accounts.order.deposit_mint;
     let manager_vault_a = &ctx.accounts.manager_vault_a;
     let manager_vault_b = &ctx.accounts.manager_vault_b;
@@ -58,6 +59,10 @@ pub fn handler<'info>(ctx: Context<Swap>, data: Vec<u8>) -> Result<()> {
     } else {
         return Err(ErrorCode::IncorrectMint.into());
     };
+
+    if deposit_vault.key() != &order.order_vault {
+        return Err(ErrorCode::IncorrectOrderVault.into());
+    }
 
     // Verify permissions at the beginning
     verify_permission(signer, deposit_vault, token_vault, manager, false)?;

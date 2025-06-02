@@ -23,15 +23,17 @@ pub struct Order {
     pub id: Pubkey,
     pub manager: Pubkey,
     pub deposit_mint: Pubkey,
+    pub order_vault: Pubkey,
     pub deposit_amount: u64,
     pub bump: u8,
 }
 
 impl Order {
-    pub const LEN: usize = 8 + 32 + 32 + 32 + 8 + 1;
+    pub const LEN: usize = 8 + 32 + 32 + 32 + 32 + 8 + 1;
 }
 
 // This PDA is used to store the config details, have authority over the fee vaults (SOL & USDC)
+// to-do: realloc the get extra space to store more new fields
 #[account]
 pub struct Config {
     pub authority: Pubkey,

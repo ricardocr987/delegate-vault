@@ -5,10 +5,6 @@ use {
     anchor_spl::token_interface::{Mint, TokenInterface, TokenAccount, TransferChecked, transfer_checked},
 };
 
-// Payment tiers in USDC (6 decimals)
-const MONTHLY_SUBSCRIPTION_AMOUNT: u64 = 49_000_000; // 49 USDC
-const YEARLY_SUBSCRIPTION_AMOUNT: u64 = 499_000_000; // 499 USDC
-
 #[derive(Accounts)]
 pub struct PaySubscription<'info> {
     #[account(mut)]
@@ -60,14 +56,14 @@ pub struct PaySubscription<'info> {
     pub signer_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub token_program: Interface<'info, TokenInterface>,
-    pub system_program: Program<'info, System>,
 }
 
 pub fn handler<'info>(ctx: Context<PaySubscription>, amount: u64) -> Result<()> {
     let manager = &mut ctx.accounts.manager;
+    let config = &ctx.accounts.config;
 
     // Validate payment amount matches either monthly or yearly subscription
-    if amount != MONTHLY_SUBSCRIPTION_AMOUNT && amount != YEARLY_SUBSCRIPTION_AMOUNT {
+    if amount != config.monthly_amount && amount != config.yearly_amount {
         return Err(ErrorCode::IncorrectPaymentAmount.into());
     }
 
@@ -88,7 +84,7 @@ pub fn handler<'info>(ctx: Context<PaySubscription>, amount: u64) -> Result<()> 
 
     // Calculate subscription end date based on payment amount
     let current_time = Clock::get()?.unix_timestamp;
-    let subscription_duration = if amount == YEARLY_SUBSCRIPTION_AMOUNT {
+    let subscription_duration = if amount == config.yearly_amount {
         // 365 days in seconds
         365 * 24 * 60 * 60
     } else {
