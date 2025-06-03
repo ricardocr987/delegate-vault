@@ -8,6 +8,7 @@ use {
 pub struct JupLiquidate<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
+    #[account(mut)]
     pub user: SystemAccount<'info>,
     // ephemeral account to use as order ID, should be stored on db, to build the swap, liquidate and withdraw instructions
     pub id: SystemAccount<'info>,
