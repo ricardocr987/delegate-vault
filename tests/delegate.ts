@@ -8,25 +8,18 @@ import {
 } from "@solana/spl-token";
 import {
   Keypair,
-  SystemProgram,
-  SYSVAR_RENT_PUBKEY,
-  Transaction,
-  PublicKey,
   Connection,
 } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
-import { assert } from "chai";
-import { rpc } from "../utils/solana/rpc";
 import { prepareTransaction } from "../utils/solana/transaction/prepare";
 import {
   base64Encoder,
-  SYSTEM_PROGRAM,
-  TOKEN_PROGRAM,
   transactionDecoder,
-  USDC_MINT,
+  USDC_MINT,  
   SOL_MINT,
   ASSOCIATED_TOKEN_PROGRAM,
   JUPITER_PROGRAM,
+  SQUADS_PERFORMANCE_ADDRESS,
 } from "../utils/solana/constants";
 import {
   getBase64EncodedWireTransaction,
@@ -37,16 +30,11 @@ import {
   signTransaction,
 } from "@solana/kit";
 import { toInstruction } from "../utils/solana/transaction/instructions/toInstruction";
-import { Decimal } from "decimal.js";
-import { IInstruction } from "@solana/kit";
 import {
   getOrderAddress,
   getOrderVaultAddress,
   getTokenVaultAddress,
-  getProjectAddress,
-  getTickArrayAddress,
-  getWhirlpoolAddress,
-  getPositionAddress,
+  getConfigAddress,
   getAtaAddress,
   getManagerAddress,
 } from "../utils/solana/pda";
@@ -65,13 +53,11 @@ import { getLookupTables } from "../utils/solana/fetcher/getLookupTables";
 // --- Test Setup ---
 let program: Program<DelegateVault>;
 let connection: Connection;
-let projectOwner: CryptoKeyPair;
 let user: CryptoKeyPair;
 let delegate: CryptoKeyPair;
-let project: Address;
+let hacker: CryptoKeyPair;
+let config: Address;
 let manager: Address;
-let usdcVault: Address;
-let solVault: Address;
 let feeVault: Address;
 let userUsdcAta: Address;
 let userSolAta: Address;
@@ -106,10 +92,6 @@ describe("delegate-vault", () => {
     );
     const keys = JSON.parse(fs.readFileSync(keysPath, "utf8"));
 
-    const projectOwnerKeyPair = Keypair.fromSecretKey(
-      bs58.decode(keys.projectOwner.secretKey)
-    );
-    projectOwner = await createKeyPairFromBytes(projectOwnerKeyPair.secretKey);
     const userKeyPair = Keypair.fromSecretKey(bs58.decode(keys.user.secretKey));
     user = await createKeyPairFromBytes(userKeyPair.secretKey);
     userAddress = await getAddressFromPublicKey(user.publicKey);
@@ -117,41 +99,27 @@ describe("delegate-vault", () => {
       bs58.decode(keys.delegate.secretKey)
     );
     delegate = await createKeyPairFromBytes(delegateKeyPair.secretKey);
+    const hackerKeyPair = Keypair.fromSecretKey(
+      bs58.decode(keys.hacker.secretKey)
+    );
+    hacker = await createKeyPairFromBytes(hackerKeyPair.secretKey);
 
     // Use mainnet mints
     usdcMint = address(USDC_MINT);
     solMint = address(SOL_MINT);
 
-    const projectOwnerAddress = await getAddressFromPublicKey(
-      projectOwner.publicKey
-    );
     delegateAddress = await getAddressFromPublicKey(delegate.publicKey);
 
     // Derive PDAs
-    project = await getProjectAddress(projectOwnerAddress);
-    manager = await getManagerAddress(userAddress, project);
-    usdcVault = await getOrderVaultAddress(
-      userAddress,
-      manager,
-      project,
-      usdcMint
-    );
-    solVault = await getTokenVaultAddress(
-      userAddress,
-      manager,
-      project,
-      solMint
-    );
-    feeVault = await getAtaAddress(project, usdcMint);
+    config = await getConfigAddress();
+    manager = await getManagerAddress(userAddress);
+    feeVault = await getAtaAddress(config, usdcMint);
     userUsdcAta = await getAtaAddress(userAddress, usdcMint);
     userSolAta = await getAtaAddress(userAddress, solMint);
 
     // Generate ephemeral key for the order
     ephemeralKey = await generateKeyPair();
     ephemeralKeyAddress = await getAddressFromPublicKey(ephemeralKey.publicKey);
-    ephemeralKeyAddress = address(
-      "8HxoazEDiq6Pd2G7v88wmCdv7kDb6QCauP5FqwXXh9QY"
-    );
     console.log("ephemeralKeyAddress", ephemeralKeyAddress.toString());
     orderPda = await getOrderAddress(manager, address(ephemeralKeyAddress));
     orderVaultPda = await getOrderVaultAddress(
@@ -248,12 +216,13 @@ describe("delegate-vault", () => {
             quoteResponse,
             userPublicKey: manager,
             skipUserAccountsRpcCalls: true,
-            wrapAndUnwrapSol: false,
+            wrapAndUnwrapSol: true,
             dynamicComputeUnitLimit: true,
             dynamicSlippage: true,
             destinationTokenAccount: tokenVaultPda.toString(),
             restrictDestinationTokenAccount: true,
             onlyDirectRoutes: true,
+            useSharedAccounts: true,
           },
           headers: { "x-api-key": process.env.JUPITER_API_KEY },
         })
@@ -312,6 +281,116 @@ describe("delegate-vault", () => {
       await new Promise((res) => setTimeout(res, 2000));
     });
 
+    test("Hacker attempts to liquidate (should fail)", async () => {
+      try {
+        // Get token vault balance
+        const tokenVaultAccount = await connection.getTokenAccountBalance(
+          new anchor.web3.PublicKey(tokenVaultPda.toString())
+        );
+        tokenVaultAmount = tokenVaultAccount.value.amount;
+        // Get Jupiter swap instructions for liquidation
+        const params = new URLSearchParams({
+          inputMint: solMint.toString(),
+          outputMint: usdcMint.toString(),
+          amount: tokenVaultAmount,
+          onlyDirectRoutes: "true",
+        });
+        const liquidationQuoteResponse = await ky
+          .get(`https://api.jup.ag/swap/v1/quote?${params}`, {
+            headers: { "x-api-key": process.env.JUPITER_API_KEY },
+          })
+          .json<JupiterQuoteResponse>();
+        liquidationSwapData = await ky
+          .post("https://api.jup.ag/swap/v1/swap-instructions", {
+            json: {
+              quoteResponse: liquidationQuoteResponse,
+              userPublicKey: manager,
+              skipUserAccountsRpcCalls: true,
+              wrapAndUnwrapSol: true,
+              dynamicComputeUnitLimit: true,
+              dynamicSlippage: true,
+              destinationTokenAccount: orderVaultPda.toString(),
+              restrictDestinationTokenAccount: true,
+              onlyDirectRoutes: true,
+              useSharedAccounts: true,
+            },
+            headers: { "x-api-key": process.env.JUPITER_API_KEY },
+          })
+          .json<JupiterSwapData>();
+
+        const hackerAddress = await getAddressFromPublicKey(hacker.publicKey);
+        const liquidationDecodedData = Buffer.from(
+          liquidationSwapData.swapInstruction.data,
+          "base64"
+        );
+        const liquidationSerializedData = Buffer.from(
+          Array.from(liquidationDecodedData)
+        );
+        const liquidationPossibleInputAta = await getAtaAddress(manager, solMint);
+        const liquidationPossibleOutputAta = await getAtaAddress(
+          manager,
+          usdcMint
+        );
+        const liquidationRemainingAccounts = (
+          liquidationSwapData.swapInstruction.accounts || []
+        ).map((account) => ({
+          pubkey: translateAddress(
+            account.pubkey == liquidationPossibleOutputAta
+              ? orderVaultPda
+              : account.pubkey == liquidationPossibleInputAta
+              ? tokenVaultPda
+              : account.pubkey == userAddress
+              ? manager
+              : account.pubkey
+          ),
+          isSigner: false,
+          isWritable: account.isWritable,
+        }));
+        const liquidateInstruction = await program.methods
+          .jupLiquidate(liquidationSerializedData)
+          .accountsPartial({
+            signer: translateAddress(hackerAddress),
+            user: translateAddress(userAddress),
+            id: translateAddress(ephemeralKeyAddress),
+            order: translateAddress(orderPda),
+            manager: translateAddress(manager),
+            managerVaultA: translateAddress(tokenVaultPda),
+            managerVaultB: translateAddress(orderVaultPda),
+            jupiterProgram: translateAddress(JUPITER_PROGRAM),
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .remainingAccounts(liquidationRemainingAccounts)
+          .instruction();
+        const liquidateInstructions = [toInstruction(liquidateInstruction)];
+        const lookupTableAddresses =
+          liquidationSwapData.addressLookupTableAddresses;
+        const lookupTableAccounts = await getLookupTables(lookupTableAddresses);
+        const liquidateTransaction = await prepareTransaction(
+          liquidateInstructions,
+          hackerAddress,
+          lookupTableAccounts
+        );
+        const liquidateTransactionBytes =
+          base64Encoder.encode(liquidateTransaction);
+        const liquidateDecodedTx = transactionDecoder.decode(
+          liquidateTransactionBytes
+        );
+        const liquidateSignedTransaction = await signTransaction(
+          [hacker],
+          liquidateDecodedTx
+        );
+        const liquidateWireTransaction = getBase64EncodedWireTransaction(
+          liquidateSignedTransaction
+        );
+        const liquidateSignature = await confirmTransaction(
+          liquidateWireTransaction
+        );
+        throw new Error("Hacker should not be able to liquidate the position");
+      } catch (error) {
+        console.log("Hacker liquidation attempt failed as expected");
+      }
+    });
+
     test("Delegate liquidate", async () => {
       // Get token vault balance
       const tokenVaultAccount = await connection.getTokenAccountBalance(
@@ -336,12 +415,13 @@ describe("delegate-vault", () => {
             quoteResponse: liquidationQuoteResponse,
             userPublicKey: manager,
             skipUserAccountsRpcCalls: true,
-            wrapAndUnwrapSol: false,
+            wrapAndUnwrapSol: true,
             dynamicComputeUnitLimit: true,
             dynamicSlippage: true,
             destinationTokenAccount: orderVaultPda.toString(),
             restrictDestinationTokenAccount: true,
             onlyDirectRoutes: true,
+            useSharedAccounts: true,
           },
           headers: { "x-api-key": process.env.JUPITER_API_KEY },
         })
@@ -367,6 +447,8 @@ describe("delegate-vault", () => {
             : account.pubkey == liquidationPossibleInputAta
             ? tokenVaultPda
             : account.pubkey == userAddress
+            ? manager
+            : account.pubkey == delegateAddress
             ? manager
             : account.pubkey
         ),
@@ -394,7 +476,7 @@ describe("delegate-vault", () => {
       const lookupTableAccounts = await getLookupTables(lookupTableAddresses);
       const liquidateTransaction = await prepareTransaction(
         liquidateInstructions,
-        userAddress,
+        delegateAddress,
         lookupTableAccounts
       );
       const liquidateTransactionBytes =
@@ -418,6 +500,9 @@ describe("delegate-vault", () => {
 
     test("Withdraw funds (should fail for delegate)", async () => {
       try {
+        const performanceReceiver = address(SQUADS_PERFORMANCE_ADDRESS);
+        const feeVault = await getAtaAddress(performanceReceiver, usdcMint);
+  
         const withdrawInstruction = await program.methods
           .withdraw()
           .accountsPartial({
@@ -425,10 +510,11 @@ describe("delegate-vault", () => {
             id: translateAddress(ephemeralKeyAddress),
             order: translateAddress(orderPda),
             manager: translateAddress(manager),
-            project: translateAddress(project),
+            config: translateAddress(config),
             depositMint: translateAddress(usdcMint),
             userAta: translateAddress(userUsdcAta),
             orderVault: translateAddress(orderVaultPda),
+            performanceReceiver: translateAddress(performanceReceiver),
             feeVault: translateAddress(feeVault),
             tokenProgram: TOKEN_PROGRAM_ID,
             associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -452,6 +538,9 @@ describe("delegate-vault", () => {
     });
   });
   test("Withdraw funds", async () => {
+    const performanceReceiver = address(SQUADS_PERFORMANCE_ADDRESS);
+    const feeVault = await getAtaAddress(performanceReceiver, usdcMint);
+
     const withdrawInstruction = await program.methods
       .withdraw()
       .accountsPartial({
@@ -459,10 +548,11 @@ describe("delegate-vault", () => {
         id: translateAddress(ephemeralKeyAddress),
         order: translateAddress(orderPda),
         manager: translateAddress(manager),
-        project: translateAddress(project),
+        config: translateAddress(config),
         depositMint: translateAddress(usdcMint),
         userAta: translateAddress(userUsdcAta),
         orderVault: translateAddress(orderVaultPda),
+        performanceReceiver: translateAddress(performanceReceiver),
         feeVault: translateAddress(feeVault),
         tokenProgram: TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM,

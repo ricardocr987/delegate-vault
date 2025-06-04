@@ -10,14 +10,15 @@ import {
   base64Encoder,
   transactionDecoder,
   ASSOCIATED_TOKEN_PROGRAM,
+  SQUADS_PERFORMANCE_ADDRESS,
 } from "../utils/solana/constants";
 import ky from "ky";
 import {
   getOrderAddress,
   getOrderVaultAddress,
   getTokenVaultAddress,
-  getProjectAddress,
   getManagerAddress,
+  getConfigAddress,
 } from "../utils/solana/pda";
 import {
   generateKeyPair,
@@ -32,7 +33,6 @@ import { confirmTransaction } from "../utils/solana/transaction/confirm";
 import { toInstruction } from "../utils/solana/transaction/instructions/toInstruction";
 import {
   getBase64EncodedWireTransaction,
-  partiallySignTransaction,
 } from "@solana/kit";
 import * as fs from "fs";
 import * as path from "path";
@@ -99,19 +99,16 @@ describe("jupiter operations", () => {
   const connection = provider.connection;
 
   // These will be set by the setup in index.ts
-  let projectOwner: CryptoKeyPair;
+  let config: Address;
   let user: CryptoKeyPair;
-  let delegate: CryptoKeyPair;
   let usdcMint: Address = USDC_MINT;
   let solMint: Address = SOL_MINT;
-  let usdcVault: Address;
-  let solVault: Address;
   let userUsdcAta: Address;
   let userSolAta: Address;
   let feeVault: Address;
   let manager: Address;
-  let project: Address;
 
+  
   let orderIdKeypair: CryptoKeyPair;
   let orderId: Address;
   let orderAddress: Address;
@@ -137,34 +134,20 @@ describe("jupiter operations", () => {
       );
       const keys = JSON.parse(fs.readFileSync(keysPath, "utf8"));
 
-      const projectOwnerKeyPair = Keypair.fromSecretKey(
-        bs58.decode(keys.projectOwner.secretKey)
-      );
-      projectOwner = await createKeyPairFromBytes(
-        projectOwnerKeyPair.secretKey
-      );
       const userKeyPair = Keypair.fromSecretKey(
         bs58.decode(keys.user.secretKey)
       );
       user = await createKeyPairFromBytes(userKeyPair.secretKey);
-      const delegateKeyPair = Keypair.fromSecretKey(
-        bs58.decode(keys.delegate.secretKey)
-      );
       userAddress = await getAddressFromPublicKey(user.publicKey);
-      delegate = await createKeyPairFromBytes(delegateKeyPair.secretKey);
 
       // Use mainnet mints
       usdcMint = address(USDC_MINT);
       solMint = address(SOL_MINT);
 
-      const projectOwnerAddress = await getAddressFromPublicKey(
-        projectOwner.publicKey
-      );
-
       // Derive PDAs
-      project = await getProjectAddress(projectOwnerAddress);
-      manager = await getManagerAddress(userAddress, project);
-      feeVault = await getAtaAddress(project, usdcMint);
+      config = await getConfigAddress();
+      manager = await getManagerAddress(userAddress);
+      feeVault = await getAtaAddress(config, usdcMint);
       userUsdcAta = await getAtaAddress(userAddress, usdcMint);
       userSolAta = await getAtaAddress(userAddress, solMint);
       orderIdKeypair = await generateKeyPair();
@@ -274,11 +257,11 @@ describe("jupiter operations", () => {
             quoteResponse,
             userPublicKey: manager,
             skipUserAccountsRpcCalls: true,
-            wrapAndUnwrapSol: false,
+            wrapAndUnwrapSol: true,
             dynamicComputeUnitLimit: true,
             dynamicSlippage: true,
             destinationTokenAccount: tokenVaultAddress,
-            useSharedAccounts: false,
+            useSharedAccounts: true,
             restrictDestinationTokenAccount: true,
             onlyDirectRoutes: true,
           },
@@ -365,11 +348,11 @@ describe("jupiter operations", () => {
             quoteResponse: liquidationQuoteResponse,
             userPublicKey: manager,
             skipUserAccountsRpcCalls: true,
-            wrapAndUnwrapSol: false,
+            wrapAndUnwrapSol: true,
             dynamicComputeUnitLimit: true,
             dynamicSlippage: true,
             destinationTokenAccount: orderVaultAddress,
-            useSharedAccounts: false,
+            useSharedAccounts: true,
             restrictDestinationTokenAccount: true,
             onlyDirectRoutes: true,
           },
@@ -442,6 +425,9 @@ describe("jupiter operations", () => {
     });
 
     test("Withdraw funds", async () => {
+      const performanceReceiver = address(SQUADS_PERFORMANCE_ADDRESS);
+      const feeVault = await getAtaAddress(performanceReceiver, usdcMint);
+
       const withdrawInstruction = await program.methods
         .withdraw()
         .accountsPartial({
@@ -449,10 +435,11 @@ describe("jupiter operations", () => {
           id: translateAddress(orderId),
           order: translateAddress(orderAddress),
           manager: translateAddress(manager),
-          project: translateAddress(project),
-          depositMint: translateAddress(DEPOSIT_MINT),
+          config: translateAddress(config),
+          depositMint: translateAddress(usdcMint),
           userAta: translateAddress(userUsdcAta),
           orderVault: translateAddress(orderVaultAddress),
+          performanceReceiver: translateAddress(performanceReceiver),
           feeVault: translateAddress(feeVault),
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM,

@@ -10,6 +10,7 @@ The Delegate Vault program allows users to:
 - Participate in Orca liquidity pools with automated position management
 - Configure automated liquidation triggers through a delegate service
 - Collect performance fees and manage positions
+- Pay subscriptions to reduce performance fees and get unlimited access to our recommendation system
 
 ## Program Architecture
 
@@ -17,15 +18,14 @@ The Delegate Vault program allows users to:
 1. **Manager Account**: Controls multiple vaults and manages permissions
    - Authority (User wallet) - Can deposit, swap, modify liquidity, liquidate and withdraw
    - Delegate (Service wallet) - Can trigger liquidations
-   - Project - Associates the manager with a specific project
 
 2. **Order Account**: Tracks individual order details and positions
    - Stores deposit information
    - Used for performance fee calculations
 
-3. **Project Account**: Manages project-level configurations
-   - Controls fee settings
-   - Manages fee collection vaults
+3. **Config Account**: Stores ocnfiguration data
+   - Controls fee settings and who receives the fees (two tiers)
+   - Payment amounts for subscriptions (monthly and yearly)
 
 ## Transaction Flow
 

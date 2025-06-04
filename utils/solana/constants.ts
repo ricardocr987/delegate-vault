@@ -83,3 +83,10 @@ export const JUPITER_PROGRAM =
   "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
 export const DELEGATE_VAULT_PROGRAM =
   "frnxh6RXdbpvTbhQ8yRtEbLNnXKmbGEqwfwMpZaBRw9" as Address;
+
+export const SQUADS_PAYMENT_ADDRESS =
+  "BzGYJPVjLKQGc3sUEwuJoSeW47Tz8H5JdGpShnwNyy9A" as Address;
+export const SQUADS_PERFORMANCE_ADDRESS =
+  "CbYxsizS1FCd4DSCYS5yJyQcMiRknURAsPAH7QfrF7FH" as Address;
+export const SQUADS_CONFIG_OWNER =
+  "5Gi9dKpJ6XnbcLAQ5AReNTFe5zw3jbCEqW22eLMTfrgP" as Address;

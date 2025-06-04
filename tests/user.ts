@@ -8,15 +8,16 @@ import { BN } from "@coral-xyz/anchor";
 import {
   ASSOCIATED_TOKEN_PROGRAM,
   base64Encoder,
+  SQUADS_PERFORMANCE_ADDRESS,
   transactionDecoder,
 } from "../utils/solana/constants";
 import {
   getOrderAddress,
   getOrderVaultAddress,
   getTokenVaultAddress,
-  getProjectAddress,
   getManagerAddress,
   getAtaAddress,
+  getConfigAddress,
 } from "../utils/solana/pda";
 import {
   generateKeyPair,
@@ -47,18 +48,15 @@ describe("user operations", () => {
   const connection = provider.connection;
 
   // These will be set by the setup
-  let projectOwner: CryptoKeyPair;
   let user: CryptoKeyPair;
   let delegate: CryptoKeyPair;
   let usdcMint: Address;
   let solMint: Address;
-  let usdcVault: Address;
-  let solVault: Address;
   let userUsdcAta: Address;
   let userSolAta: Address;
   let feeVault: Address;
   let manager: Address;
-  let project: Address;
+  let config: Address;
   let userAddress: Address;
   let ephemeralKey: CryptoKeyPair;
   let ephemeralKeyAddress: Address;
@@ -77,10 +75,6 @@ describe("user operations", () => {
     );
     const keys = JSON.parse(fs.readFileSync(keysPath, "utf8"));
 
-    const projectOwnerKeyPair = Keypair.fromSecretKey(
-      bs58.decode(keys.projectOwner.secretKey)
-    );
-    projectOwner = await createKeyPairFromBytes(projectOwnerKeyPair.secretKey);
     const userKeyPair = Keypair.fromSecretKey(bs58.decode(keys.user.secretKey));
     user = await createKeyPairFromBytes(userKeyPair.secretKey);
     userAddress = await getAddressFromPublicKey(user.publicKey);
@@ -93,32 +87,18 @@ describe("user operations", () => {
     usdcMint = address(USDC_MINT);
     solMint = address(SOL_MINT);
 
-    const projectOwnerAddress = await getAddressFromPublicKey(
-      projectOwner.publicKey
-    );
     delegateAddress = await getAddressFromPublicKey(delegate.publicKey);
 
     // Derive PDAs
-    project = await getProjectAddress(projectOwnerAddress);
-    manager = await getManagerAddress(userAddress, project);
-    usdcVault = await getOrderVaultAddress(
-      userAddress,
-      manager,
-      project,
-      usdcMint
-    );
-    solVault = await getTokenVaultAddress(
-      userAddress,
-      manager,
-      project,
-      solMint
-    );
-    feeVault = await getAtaAddress(project, usdcMint);
+    config = await getConfigAddress();
+    manager = await getManagerAddress(userAddress);
+    feeVault = await getAtaAddress(SQUADS_PERFORMANCE_ADDRESS, usdcMint);
     userUsdcAta = await getAtaAddress(userAddress, usdcMint);
     userSolAta = await getAtaAddress(userAddress, solMint);
 
     ephemeralKey = await generateKeyPair();
     ephemeralKeyAddress = await getAddressFromPublicKey(ephemeralKey.publicKey);
+    console.log("orderId", ephemeralKeyAddress);
     orderPda = await getOrderAddress(manager, address(ephemeralKeyAddress));
     orderVaultPda = await getOrderVaultAddress(
       userAddress,
@@ -134,7 +114,6 @@ describe("user operations", () => {
         .initManager()
         .accountsPartial({
           signer: translateAddress(userAddress),
-          project: translateAddress(config.toString()),
           delegate: translateAddress(delegateAddress),
           manager: translateAddress(manager.toString()),
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -168,9 +147,8 @@ describe("user operations", () => {
       const managerAccount = await program.account.manager.fetch(
         translateAddress(manager.toString())
       );
-      expect(managerAccount.config.toString()).toBe(config.toString());
       expect(managerAccount.authority.toString()).toBe(userAddress);
-      expect(managerAccount.delegate.toString()).toBe(userAddress);
+      expect(managerAccount.delegate.toString()).toBe(delegateAddress);
     });
 
     test("Deposits funds into the vault", async () => {
@@ -285,51 +263,10 @@ describe("user operations", () => {
       expect(tokenVaultBalance).toBeDefined();
     });
 
-    test("Closes token vault", async () => {
-      const tokenVaultPda = await getTokenVaultAddress(
-        userAddress,
-        manager,
-        orderPda,
-        solMint
-      );
-
-      const closeTokenVaultInstruction = await program.methods
-        .closeTokenVault()
-        .accountsPartial({
-          signer: translateAddress(userAddress),
-          user: translateAddress(userAddress),
-          id: translateAddress(ephemeralKeyAddress),
-          order: orderPda,
-          manager: translateAddress(manager.toString()),
-          tokenVault: tokenVaultPda,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .instruction();
-
-      // Convert to IInstruction format
-      const instructions = [toInstruction(closeTokenVaultInstruction)];
-
-      // Prepare transaction
-      const transaction = await prepareTransaction(
-        instructions,
-        userAddress,
-        {} // No lookup tables needed for this transaction
-      );
-      const transactionBytes = base64Encoder.encode(transaction);
-      const decodedTx = transactionDecoder.decode(transactionBytes);
-      const signedTransaction = await partiallySignTransaction(
-        [user],
-        decodedTx
-      );
-      const wireTransaction =
-        getBase64EncodedWireTransaction(signedTransaction);
-
-      // Sign and confirm transaction
-      const signature = await confirmTransaction(wireTransaction);
-      console.log("Transaction signature (close token vault):", signature);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    });
     test("Withdraws funds from the vault", async () => {
+      const performanceReceiver = address(SQUADS_PERFORMANCE_ADDRESS);
+      const feeVault = await getAtaAddress(performanceReceiver, usdcMint);
+
       const withdrawInstruction = await program.methods
         .withdraw()
         .accountsPartial({
@@ -337,10 +274,11 @@ describe("user operations", () => {
           id: translateAddress(ephemeralKeyAddress),
           order: translateAddress(orderPda),
           manager: translateAddress(manager),
-          project: translateAddress(project),
+          config: translateAddress(config),
           depositMint: translateAddress(usdcMint),
           userAta: translateAddress(userUsdcAta),
           orderVault: translateAddress(orderVaultPda),
+          performanceReceiver: translateAddress(performanceReceiver),
           feeVault: translateAddress(feeVault),
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM,
